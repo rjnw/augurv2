@@ -170,10 +170,15 @@ conjStat v_mod cg p_fn l_fn =
 
 conjDirCat :: DensInfo -> DensInfo -> ConjM (L.Stmt TyId)
 conjDirCat (DI Dirichlet p_ept p_es) (DI Categorical l_ept l_es) =
-    do v_cnt <- conjStatId Anon (cntTy (densPtTy p_ept))
-       let shp_cnt = S.mkCpy (densPtVar p_ept)
-           e_cat = cgExp l_ept
-       modify (\st -> st { cs_stats = [ (v_cnt, shp_cnt) ] })
+    do stats <- gets cs_stats
+       (v_cnt, shp_cnt) <- case stats of
+         [stat] -> return stat
+         [] -> do v_cnt <- conjStatId Anon (cntTy (densPtTy p_ept))
+                  let shp_cnt = S.mkCpy (densPtVar p_ept)
+                      stat = (v_cnt, shp_cnt)
+                  modify (\st -> st { cs_stats = [ stat ] })
+                  return stat
+       let e_cat = cgExp l_ept
        return $ L.Store v_cnt (map cgExp (densPtIdx' p_ept) ++ [e_cat]) L.AtmInc 1
     where
       cntTy (VecTy RealTy) = VecTy IntTy
@@ -337,6 +342,11 @@ selectConj = go
           go (subst x' e' fn) fn'
       go fn@Dens{} (Pi _ _ fn') =
           go fn fn'
+      go fn fn'@(Prod fn1 fn2) =
+          case (go fn fn1, go fn fn2) of
+            (r@(Right (_, dist1)), Right (_, dist2)) | dist1 == dist2 -> r
+            _ -> Left $ "No conjugacy relation found between "
+                     ++ pprShow fn ++ " and " ++ pprShow fn'
       go (Let x e fn) fn' =
           go (subst x e fn) fn'
       go fn (Let x' e' fn') =
@@ -369,6 +379,9 @@ chkConjM fn@Dens{} (Ind fn' [ CatCond x' e' ]) =
 chkConjM fn@Dens{} (Pi x gen fn') =
     do traceM $ "CHKCONJ " ++ pprShow fn ++ " and " ++ pprShow (Pi x gen fn')
        chkConjM fn fn'
+chkConjM fn fn'@(Prod fn1 fn2) =
+    do traceM $ "CHKCONJ " ++ pprShow fn ++ " and " ++ pprShow fn'
+       liftM2 (&&) (chkConjM fn fn1) (chkConjM fn fn2)
 chkConjM (Let x e fn) fn' =
     do traceM $ "CHKCONJ " ++ pprShow (subst x e fn) ++ " and " ++ pprShow fn'
        chkConjM (subst x e fn) fn'
