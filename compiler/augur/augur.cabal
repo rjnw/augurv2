@@ -3,19 +3,20 @@
 
 name:                augur
 version:             0.1.0.0
--- synopsis:            
+-- synopsis:
 
-license:             Apache-2.0 
+license:             Apache-2.0
 license-file:        LICENSE
 author:              Daniel Eachern Huang
 maintainer:          dan.e.huang@gmail.com
--- copyright:           
--- category:            
+-- copyright:
+-- category:
 build-type:          Configure
--- extra-source-files:  
+-- extra-source-files:
 cabal-version:       >=1.18
 
 library
+    GHC-Options:       -static -optl-static
   exposed-modules:
     AstUtil.Fresh
     AstUtil.Pretty
@@ -86,25 +87,25 @@ library
     Rv.RvSyn
     Xface.PySyn
   -- other-extensions:
-  -- extra-libraries:     HSrts-ghc7.8.4 
-  build-depends:       base, 
-                       mtl >= 2.2.1, 
-                       containers, 
-                       transformers, 
-                       array >= 0.5.0.0, 
+  -- extra-libraries:     HSrts-ghc7.8.4
+  extra-libraries:     HSrts-ghc8.2.2
+  build-depends:       base,
+                       mtl >= 2.2.1,
+                       containers,
+                       transformers,
+                       array >= 0.5.0.0,
                        pretty >= 1.1.1.1
-  build-tools:         alex, happy
   c-sources:           src/FFI/augurFFI.c
   hs-source-dirs:      src
   default-language:    Haskell2010
 
-executable cmd
-  main-is:             Main.hs
-  build-depends:       base, 
-                       mtl >= 2.2.1, 
-                       containers >= 0.5.5.1, 
-                       transformers >= 0.5.2.0,
-                       augur 
-  build-tools:         alex, happy
-  hs-source-dirs:      cmd
-  default-language:    Haskell2010
+-- executable cmd
+--   main-is:             Main.hs
+--   build-depends:       base,
+--                        mtl >= 2.2.1,
+--                        containers >= 0.5.5.1,
+--                        transformers >= 0.5.2.0,
+--                        augur
+--   build-tools:         alex, happy
+--   hs-source-dirs:      cmd
+--   default-language:    Haskell2010
