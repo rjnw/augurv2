@@ -38,10 +38,10 @@ class AugurOpt:
     # paramScale: dictionary of variances
     def __init__(self, cached=False, target='cpu', initStrat=AugurRandom(), paramScale=None):
         self.cached = cached
-        
+
         assert (target == 'cpu' or target == 'gpu')
         self.target = target
-        
+
         assert (isinstance(initStrat, AugurInitStrat))
         self.initStrat = initStrat
 
@@ -117,7 +117,7 @@ class AugurInfer:
 
         with open(path_config, 'r') as file_yml:
             config = yaml.load(file_yml)
-            
+
             assert (config['os'] == 'osx' or config['os'] == 'linux')
             self.os = config['os']
 
@@ -137,7 +137,7 @@ class AugurInfer:
 
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         if self.tmpdir is not None:
             shutil.rmtree(self.tmpdir)
@@ -169,7 +169,7 @@ class AugurInfer:
 
             # == Invoke native compiler
             self._native_augur_compile(c_inferhdr, c_infercode)
-            
+
             # == Invoke native compiler
             self._setup_py_xface(paramtys, mk_modparams)
 
@@ -185,7 +185,7 @@ class AugurInfer:
 
     def sample(self):
         assert self.inferLib is not None
-        
+
         # Step and copy
         self._call_augur_step()
         ll, modParams = self._call_augur_cpy()
@@ -206,7 +206,7 @@ class AugurInfer:
 
         for i in range(0, numSamples * thin):
             self._call_augur_step()
-            
+
             # Copy sample back
             if i % thin == 0:
                 if i % 100 == 0:
@@ -222,7 +222,7 @@ class AugurInfer:
         return samples
 
     #------------------------------
-    # Python / CTypes helper 
+    # Python / CTypes helper
 
     # Convert base values to pointer values
     def _wrap_modparams(self, initStrat, *args):
@@ -246,7 +246,7 @@ class AugurInfer:
         # Store hyper-parameters for future use
         self.hypers = hypers    # used to be args
 
-        # Get hyper-parameter sizes 
+        # Get hyper-parameter sizes
         sizes = []
         for hyper in hypers:
             if ci.isInt(type(hyper)):
@@ -268,14 +268,14 @@ class AugurInfer:
             lib_hs_augur_compiler = cdll.LoadLibrary(op.join(self.libaugurdir, 'libHSaugur-0.1.0.0-BRXl6V4Cbnj3aW4oo2NE22-ghc8.0.2.dylib'))
             logmsg('Successfully loaded ' + repr(lib_hs_augur_compiler) + ' as osx dynamic library')
         elif self.os == 'linux':
-            lib_hs_augur_compiler = cdll.LoadLibrary(op.join(self.libaugurdir, 'libHSaugur-0.1.0.0-BRXl6V4Cbnj3aW4oo2NE22-ghc8.0.2.so'))
+            lib_hs_augur_compiler = cdll.LoadLibrary(op.join(self.libaugurdir, 'libHSaugur-0.1.0.0.so'))
             logmsg('Successfully loaded ' + repr(lib_hs_augur_compiler) + ' as linux dynamic library')
-        
+
         # [ model, target, infer, mode, sizes ] -> String
         compiler = getattr(lib_hs_augur_compiler, 'hs_compile')
         compiler.argtypes = [ c_char_p, c_int, c_char_p, c_int, c_char_p ]
-        compiler.restype = c_char_p            
-        
+        compiler.restype = c_char_p
+
         # Prepare compiler arguments
         if self.aopt.target == 'cpu':
             target = 0
@@ -310,7 +310,7 @@ class AugurInfer:
     def _native_augur_compile(self, c_inferhdr, c_infercode):
         # Set file name for inference code
         if self.aopt.target == 'cpu':
-            f_infer = op.join(self.workdir, 'augur_iface.c') 
+            f_infer = op.join(self.workdir, 'augur_iface.c')
         elif self.aopt.target == 'gpu':
             f_infer = op.join(self.workdir, 'augur_iface.cu')
 
@@ -426,7 +426,7 @@ class AugurInfer:
         # Load python types
         hdr ="from pyaugur.ciface import*\n_paramAndDataTy = "
         exec(hdr + paramtys) in locals()
-        
+
         self.hyperTys = map(lambda x: x[1], _paramAndDataTy[0])
         self.paramTys = map(lambda x: x[1], _paramAndDataTy[1])
         self.paramTyCtx = dict(_paramAndDataTy[1])
@@ -437,7 +437,7 @@ class AugurInfer:
         #print hdr + mk_modparams
         exec(hdr + mk_modparams) in locals()
         self.mk_modparams = genMod
-    
+
 
     #------------------------------
     # Augur interface calls
@@ -453,12 +453,12 @@ class AugurInfer:
         f = getattr(self.inferLib, 'augur_iface_init')
         f.restype = None
         f.argtypes = []
-        
+
         c_args = []
         self.sampleArgs = []
         for (hyper, pyTy) in zip(hypers, self.hyperTys):
             f.argtypes.append(ci.pyTyToCtype(pyTy))
-            c_args.append(ci.pyValToCVal(pyTy, hyper)) 
+            c_args.append(ci.pyValToCVal(pyTy, hyper))
         for ((name, param), pyTy) in zip(modParams, self.paramTys):
             f.argtypes.append(ci.pyTyToCtype(pyTy, promoteBaseTy=True))
             #c_args.append(ci.pyValToCVal(pyTy, param))
@@ -468,7 +468,7 @@ class AugurInfer:
             f.argtypes.append(ci.pyTyToCtype(pyTy))
             c_args.append(ci.pyValToCVal(pyTy, data_))
         logmsg('augur_iface_init types: ' + str(f.argtypes))
-        
+
         # Initialize inference with c_args (includes hyperparams, params, and data)
         logmsg('Initializing and transferring data...')
         f(*c_args)
